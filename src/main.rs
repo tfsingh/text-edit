@@ -1,19 +1,17 @@
 use eframe::egui;
-use ropey::Rope;
-
 use eframe::egui::{CentralPanel, ScrollArea, WidgetText};
 
 fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions::default();
     eframe::run_native(
-        "Keyboard events",
+        "notepad",
         options,
         Box::new(|_cc| Box::new(State::default())),
     )
 }
 
 struct State {
-    buffer: Vec<Rope>,
+    buffer: Vec<String>,
     current_line: usize,
     current_column: usize,
 }
@@ -21,7 +19,7 @@ struct State {
 impl Default for State {
     fn default() -> Self {
         Self {
-            buffer: vec![Rope::new()],
+            buffer: vec![String::new()],
             current_line: 0,
             current_column: 0,
         }
@@ -39,21 +37,21 @@ impl eframe::App for State {
                         .buffer
                         .iter()
                         .enumerate()
-                        .map(|(line_index, rope)| {
-                            let mut line = format!("{} {}", line_index + 1, rope.to_string());
+                        .map(|(line_index, line)| {
+                            let mut display_line = format!("{} {}", line_index + 1, line);
                             if line_index == self.current_line {
                                 if self.current_column + line_index.to_string().len() + 1
-                                    < line.len()
+                                    < display_line.len()
                                 {
-                                    line.insert(
+                                    display_line.insert(
                                         self.current_column + line_index.to_string().len() + 1,
                                         '|',
                                     );
                                 } else {
-                                    line.push('|');
+                                    display_line.push('|');
                                 }
                             }
-                            line
+                            display_line
                         })
                         .collect::<Vec<_>>()
                         .join("\n");
@@ -66,8 +64,8 @@ impl eframe::App for State {
                 match event {
                     egui::Event::Text(t) => {
                         if let Some(curr_line) = self.buffer.get_mut(self.current_line) {
-                            curr_line.append(Rope::from_str(&t));
-                            self.current_column += 1;
+                            curr_line.insert_str(self.current_column, &t);
+                            self.current_column += t.len();
                         }
                     }
                     egui::Event::Key {
@@ -92,27 +90,35 @@ impl eframe::App for State {
                                 self.current_column = self
                                     .buffer
                                     .get(self.current_line)
-                                    .map_or(0, |line| line.len_chars());
+                                    .map_or(0, |line| line.len());
 
                                 if let Some(prev_line) = self.buffer.get_mut(self.current_line) {
-                                    prev_line.append(curr_line);
+                                    prev_line.push_str(&curr_line);
                                 }
 
                                 return;
                             }
 
                             if let Some(curr_line) = self.buffer.get_mut(self.current_line) {
-                                self.current_column -= 1;
-                                curr_line.remove(self.current_column..=self.current_column);
+                                self.current_column = self.current_column.saturating_sub(1);
+                                curr_line.remove(self.current_column);
                             }
                         }
                         egui::Key::Enter => {
                             if !pressed {
                                 return;
                             }
-                            self.buffer.insert(self.current_line + 1, Rope::new());
-                            self.current_line += 1;
+
+                            let new_line =
+                                if let Some(curr_line) = self.buffer.get_mut(self.current_line) {
+                                    curr_line.split_off(self.current_column)
+                                } else {
+                                    String::new()
+                                };
+                            self.buffer.insert(self.current_line + 1, new_line);
+
                             self.current_column = 0;
+                            self.current_line += 1;
                         }
                         egui::Key::ArrowLeft => {
                             if !pressed {
@@ -127,7 +133,7 @@ impl eframe::App for State {
                             }
                             if let Some(curr_line) = self.buffer.get_mut(self.current_line) {
                                 self.current_column =
-                                    std::cmp::min(self.current_column + 1, curr_line.len_chars())
+                                    std::cmp::min(self.current_column + 1, curr_line.len());
                             }
                         }
                         _ => {}
