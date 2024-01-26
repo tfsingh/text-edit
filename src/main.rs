@@ -40,17 +40,20 @@ impl eframe::App for State {
                         .iter()
                         .enumerate()
                         .map(|(line_index, rope)| {
+                            let mut line = format!("{} {}", line_index + 1, rope.to_string());
                             if line_index == self.current_line {
-                                let mut line = rope.to_string();
-                                if self.current_column < line.len() {
-                                    line.insert(self.current_column, '|');
+                                if self.current_column + line_index.to_string().len() + 1
+                                    < line.len()
+                                {
+                                    line.insert(
+                                        self.current_column + line_index.to_string().len() + 1,
+                                        '|',
+                                    );
                                 } else {
                                     line.push('|');
                                 }
-                                line
-                            } else {
-                                rope.to_string()
                             }
+                            line
                         })
                         .collect::<Vec<_>>()
                         .join("\n");
@@ -101,7 +104,6 @@ impl eframe::App for State {
                                 self.state.insert(self.current_line + 1, Rope::new());
                                 self.current_line += 1;
                                 self.current_column = 0;
-                                println!("here {:?}", self.state);
                             }
                         }
                         _ => {}
