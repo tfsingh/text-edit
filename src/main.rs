@@ -125,15 +125,26 @@ impl eframe::App for State {
                                 return;
                             }
 
-                            self.current_column = self.current_column.saturating_sub(1);
+                            if self.current_column > 0 {
+                                self.current_column -= 1;
+                            } else if self.current_line != 0 {
+                                self.current_line -= 1;
+                                self.current_column =
+                                    self.buffer.get(self.current_line).unwrap().len();
+                            }
                         }
                         egui::Key::ArrowRight => {
                             if !pressed {
                                 return;
                             }
-                            if let Some(curr_line) = self.buffer.get_mut(self.current_line) {
-                                self.current_column =
-                                    std::cmp::min(self.current_column + 1, curr_line.len());
+
+                            if self.current_column
+                                != self.buffer.get(self.current_line).unwrap().len()
+                            {
+                                self.current_column += 1;
+                            } else if self.current_line != self.buffer.len() - 1 {
+                                self.current_line += 1;
+                                self.current_column = 0;
                             }
                         }
                         _ => {}
