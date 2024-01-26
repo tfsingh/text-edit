@@ -147,6 +147,32 @@ impl eframe::App for State {
                                 self.current_column = 0;
                             }
                         }
+                        egui::Key::ArrowUp => {
+                            if !pressed {
+                                return;
+                            }
+
+                            if self.current_line != 0 {
+                                self.current_line -= 1;
+                                self.current_column = std::cmp::min(
+                                    self.current_column,
+                                    self.buffer.get(self.current_line).unwrap().len(),
+                                );
+                            }
+                        }
+                        egui::Key::ArrowDown => {
+                            if !pressed {
+                                return;
+                            }
+
+                            if self.current_line != self.buffer.len() - 1 {
+                                self.current_line += 1;
+                                self.current_column = std::cmp::min(
+                                    self.current_column,
+                                    self.buffer.get(self.current_line).unwrap().len(),
+                                );
+                            }
+                        }
                         _ => {}
                     },
                     _ => {}
