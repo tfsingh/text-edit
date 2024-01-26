@@ -38,7 +38,20 @@ impl eframe::App for State {
                     let combined_text = self
                         .state
                         .iter()
-                        .map(|rope| rope.to_string())
+                        .enumerate()
+                        .map(|(line_index, rope)| {
+                            if line_index == self.current_line {
+                                let mut line = rope.to_string();
+                                if self.current_column < line.len() {
+                                    line.insert(self.current_column, '|');
+                                } else {
+                                    line.push('|');
+                                }
+                                line
+                            } else {
+                                rope.to_string()
+                            }
+                        })
                         .collect::<Vec<_>>()
                         .join("\n");
                     ui.label(WidgetText::RichText(combined_text.into()));
@@ -57,19 +70,40 @@ impl eframe::App for State {
                     egui::Event::Key {
                         key,
                         pressed,
-                        modifiers,
-                        physical_key,
-                        repeat,
+                        modifiers: _,
+                        physical_key: _,
+                        repeat: _,
                     } => match key {
                         egui::Key::Backspace => {
-                            if let Some(curr_line) = self.state.get_mut(self.current_line) {
-                                if pressed && curr_line.len_chars() > 0 {
-                                    curr_line.remove(self.current_column - 1..self.current_column);
-                                    self.current_column -= 1;
+                            if !pressed {
+                                return;
+                            }
+
+                            if self.current_column == 0 {
+                                if self.current_line == 0 {
+                                    return;
                                 }
+                                self.current_line -= 1;
+                                self.current_column = self
+                                    .state
+                                    .get(self.current_line)
+                                    .map_or(0, |line| line.len_chars());
+                                return;
+                            }
+
+                            if let Some(curr_line) = self.state.get_mut(self.current_line) {
+                                self.current_column -= 1;
+                                curr_line.remove(self.current_column..=self.current_column);
                             }
                         }
-                        egui::Key::Enter => {}
+                        egui::Key::Enter => {
+                            if pressed {
+                                self.state.insert(self.current_line + 1, Rope::new());
+                                self.current_line += 1;
+                                self.current_column = 0;
+                                println!("here {:?}", self.state);
+                            }
+                        }
                         _ => {}
                     },
                     _ => {}
