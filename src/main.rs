@@ -86,11 +86,18 @@ impl eframe::App for State {
                                 if self.current_line == 0 {
                                     return;
                                 }
+                                let curr_line = self.buffer.remove(self.current_line);
                                 self.current_line -= 1;
+
                                 self.current_column = self
                                     .buffer
                                     .get(self.current_line)
                                     .map_or(0, |line| line.len_chars());
+
+                                if let Some(prev_line) = self.buffer.get_mut(self.current_line) {
+                                    prev_line.append(curr_line);
+                                }
+
                                 return;
                             }
 
