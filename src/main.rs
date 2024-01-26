@@ -13,7 +13,7 @@ fn main() -> Result<(), eframe::Error> {
 }
 
 struct State {
-    state: Vec<Rope>,
+    buffer: Vec<Rope>,
     current_line: usize,
     current_column: usize,
 }
@@ -21,7 +21,7 @@ struct State {
 impl Default for State {
     fn default() -> Self {
         Self {
-            state: vec![Rope::new()],
+            buffer: vec![Rope::new()],
             current_line: 0,
             current_column: 0,
         }
@@ -36,7 +36,7 @@ impl eframe::App for State {
                 .stick_to_bottom(true)
                 .show(ui, |ui| {
                     let combined_text = self
-                        .state
+                        .buffer
                         .iter()
                         .enumerate()
                         .map(|(line_index, rope)| {
@@ -65,7 +65,7 @@ impl eframe::App for State {
             for event in events {
                 match event {
                     egui::Event::Text(t) => {
-                        if let Some(curr_line) = self.state.get_mut(self.current_line) {
+                        if let Some(curr_line) = self.buffer.get_mut(self.current_line) {
                             curr_line.append(Rope::from_str(&t));
                             self.current_column += 1;
                         }
@@ -88,22 +88,39 @@ impl eframe::App for State {
                                 }
                                 self.current_line -= 1;
                                 self.current_column = self
-                                    .state
+                                    .buffer
                                     .get(self.current_line)
                                     .map_or(0, |line| line.len_chars());
                                 return;
                             }
 
-                            if let Some(curr_line) = self.state.get_mut(self.current_line) {
+                            if let Some(curr_line) = self.buffer.get_mut(self.current_line) {
                                 self.current_column -= 1;
                                 curr_line.remove(self.current_column..=self.current_column);
                             }
                         }
                         egui::Key::Enter => {
-                            if pressed {
-                                self.state.insert(self.current_line + 1, Rope::new());
-                                self.current_line += 1;
-                                self.current_column = 0;
+                            if !pressed {
+                                return;
+                            }
+                            self.buffer.insert(self.current_line + 1, Rope::new());
+                            self.current_line += 1;
+                            self.current_column = 0;
+                        }
+                        egui::Key::ArrowLeft => {
+                            if !pressed {
+                                return;
+                            }
+
+                            self.current_column = self.current_column.saturating_sub(1);
+                        }
+                        egui::Key::ArrowRight => {
+                            if !pressed {
+                                return;
+                            }
+                            if let Some(curr_line) = self.buffer.get_mut(self.current_line) {
+                                self.current_column =
+                                    std::cmp::min(self.current_column + 1, curr_line.len_chars())
                             }
                         }
                         _ => {}
